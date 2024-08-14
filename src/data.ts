@@ -1,6 +1,25 @@
 import ExcelJS from "@zurmokeeper/exceljs";
 import { sanitizeText } from "./helpers";
 
+/**
+ * Updates the cell with the provided value and options.
+ * It can overwrite the cell value, update the cell style, fill color, number format, and note.
+ *
+ * @param cell - The cell to be updated.
+ * @param value - The value to be set in the cell.
+ * @param opts - Options to customize the cell update process.
+ * @param opts.overwrite - Whether to overwrite the cell value if it already exists. Default is true.
+ * @param opts.style - The style to be applied to the cell.
+ * @param opts.fillColor - The fill color to be applied to the cell.
+ * @param opts.removeFillColor - Whether to remove the fill color from the cell.
+ * @param opts.numFmt - The number format to be applied to the cell.
+ * @param opts.note - The note to be added to the cell.
+ *
+ * @returns {void}
+ *
+ * @example
+ * updateCell(cell, "Hello, World!");
+ */
 export const updateCell = (
   cell: ExcelJS.Cell,
   value?: ExcelJS.CellValue,
@@ -12,7 +31,7 @@ export const updateCell = (
     numFmt?: string;
     note?: string;
   }
-) => {
+): void => {
   const overwrite = opts?.overwrite ?? true;
   if (!overwrite && cell.value && cell.value !== "") return;
 
@@ -53,111 +72,30 @@ export const updateCell = (
   }
 };
 
-// Find first and last rows for employees
-export const findFirstRowOfDataGroup = ({
-  worksheet,
-  startRowNumber,
-  identifierCol,
-  identifierCondition,
-}: {
-  worksheet: ExcelJS.Worksheet;
-  startRowNumber: number;
-  identifierCol: string;
-  identifierCondition?: (identifierValue: string) => boolean;
-}) => {
-  // Get rows for employee data
-  let rowNumber = startRowNumber;
-  let identifierValue = worksheet
-    .getRow(rowNumber)
-    .getCell(identifierCol)
-    .value?.toString();
-  while (
-    identifierCondition
-      ? identifierValue
-        ? identifierCondition(identifierValue)
-        : false
-      : identifierValue && identifierValue !== ""
-  ) {
-    rowNumber--;
-    identifierValue = worksheet
-      .getRow(rowNumber)
-      .getCell(identifierCol)
-      .value?.toString();
-  }
-  const firstRowNumber = rowNumber + 1;
-  return firstRowNumber;
-};
-
-export const findLastRowOfDataGroup = ({
-  worksheet,
-  startRowNumber,
-  identifierCol,
-  identifierCondition,
-}: {
-  worksheet: ExcelJS.Worksheet;
-  startRowNumber: number;
-  identifierCol: string;
-  identifierCondition?: (identifierValue: string) => boolean;
-}) => {
-  // Get rows for employee data
-  let rowNumber = startRowNumber;
-  let identifierValue = worksheet
-    .getRow(rowNumber)
-    .getCell(identifierCol)
-    .value?.toString();
-  while (
-    identifierCondition
-      ? identifierValue
-        ? identifierCondition(identifierValue)
-        : false
-      : identifierValue && identifierValue !== ""
-  ) {
-    rowNumber++;
-    identifierValue = worksheet
-      .getRow(rowNumber)
-      .getCell(identifierCol)
-      .value?.toString();
-  }
-  const lastRowNumber = rowNumber - 1;
-  return lastRowNumber;
-};
-
-// Create new row for employees not found
-export const createNewRowAfterDataGroup = ({
-  worksheet,
-  startRowNumber,
-  identifierCol,
-}: {
-  worksheet: ExcelJS.Worksheet;
-  startRowNumber: number;
-  identifierCol: string;
-}) => {
-  // Get rows for employee data
-  let unknownEmployeePrepRowNumber = startRowNumber;
-  let unknownEmployeePopulatedFieldValue = worksheet
-    .getRow(unknownEmployeePrepRowNumber)
-    .getCell(identifierCol).value;
-  while (
-    unknownEmployeePopulatedFieldValue !== null &&
-    unknownEmployeePopulatedFieldValue !== ""
-  ) {
-    unknownEmployeePrepRowNumber++;
-    unknownEmployeePopulatedFieldValue = worksheet
-      .getRow(unknownEmployeePrepRowNumber)
-      .getCell(identifierCol).value;
-  }
-  const unknownEmployeePrepLastEmployeeRow = unknownEmployeePrepRowNumber - 1;
-
-  // Duplicate previous row
-  worksheet.insertRow(unknownEmployeePrepLastEmployeeRow + 1, [], "i+");
-  const newRow = worksheet.getRow(unknownEmployeePrepLastEmployeeRow + 1);
-  newRow.eachCell({ includeEmpty: true }, (cell) => {
-    cell.value = "";
-  });
-  return newRow;
-};
-
-// Find matching row by ID
+/**
+ * Finds the matching row in the worksheet based on the provided ID and options.
+ * It can find the exact match or a similar match based on the last digits of the ID.
+ *
+ * @param worksheet - The worksheet to search for the matching row.
+ * @param startRowNumber - The starting row number to search for the matching row.
+ * @param lastRowNumber - The last row number to search for the matching row.
+ * @param id - The ID to search for in the worksheet.
+ * @param lookupCol - The column to search for the ID in the worksheet.
+ * @param opts - Options to customize the search process.
+ * @param opts.findSimilarMatchWithLastDigits - Whether to find a similar match based on the last digits of the ID.
+ *
+ * @returns {ExcelJS.Row | undefined} - The matching row if found, otherwise undefined.
+ *
+ * @example
+ * const row = findMatchingRowById({
+ *   worksheet,
+ *   startRowNumber: 2,
+ *   lastRowNumber: 10,
+ *   id: "12345",
+ *   lookupCol: "A",
+ *   opts: { findSimilarMatchWithLastDigits: true }
+ * });
+ */
 export const findMatchingRowById = ({
   worksheet,
   startRowNumber,
@@ -174,29 +112,54 @@ export const findMatchingRowById = ({
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
-}) => {
-  const employeeRows = worksheet.getRows(startRowNumber, lastRowNumber);
-  if (!employeeRows) {
-    console.log("No employee rows found");
+}): ExcelJS.Row | undefined => {
+  const rows = worksheet.getRows(startRowNumber, lastRowNumber);
+  if (!rows) {
+    console.log("No matching rows found");
     return undefined;
   }
 
-  const row = employeeRows.find(
+  const row = rows.find(
     (row) => id === sanitizeText(row.getCell(lookupCol).value?.toString())
   );
 
   if (!row && opts?.findSimilarMatchWithLastDigits) {
-    return employeeRows.find((row) => {
-      const worksheetEmployeeId = sanitizeText(
+    return rows.find((row) => {
+      const currentRowId = sanitizeText(
         row.getCell(lookupCol).value?.toString()
       );
-      return worksheetEmployeeId?.endsWith(id);
+      return currentRowId?.endsWith(id);
     });
   }
   return row;
 };
 
-// Find matching row by name
+/**
+ * Finds the matching row in the worksheet based on the provided name and options.
+ * It can find the exact match or a similar match based on the name (although an exact match is still performed first).
+ * The name can be split into first name and last name or combined with a delimiter.
+ *
+ * @param worksheet - The worksheet to search for the matching row.
+ * @param startRowNumber - The starting row number to search for the matching row.
+ * @param lastRowNumber - The last row number to search for the matching row.
+ * @param nameValues - The name values to search for in the worksheet.
+ * @param lookupCols - The columns to search for the name in the worksheet.
+ * @param opts - Options to customize the search process.
+ * @param opts.findSimilarMatch - Whether to find a similar match based on the name if the exact match is not found. Default is true.
+ *
+ * @returns {ExcelJS.Row | undefined} - The matching row if found, otherwise undefined.
+ *
+ * @example
+ * const row = findMatchingRowByName({
+ *   worksheet,
+ *   startRowNumber: 2,
+ *   lastRowNumber: 10,
+ *   nameValues: [{ firstName: "John", lastName: "Doe" }],
+ *   lookupCols: { firstName: "A", lastName: "B" },
+ *   opts: { findSimilarMatch: true }
+ * });
+ *
+ */
 export const findMatchingRowByName = ({
   worksheet,
   startRowNumber,
@@ -225,102 +188,98 @@ export const findMatchingRowByName = ({
   opts?: {
     findSimilarMatch?: boolean;
   };
-}) => {
+}): ExcelJS.Row | undefined => {
   const _findSimilarMatch = opts?.findSimilarMatch ?? true;
   const sanitizedNameValues = nameValues.map((nameValue) => ({
     lastName: sanitizeText(nameValue.lastName),
     firstName: sanitizeText(nameValue.firstName),
   }));
-  const employeeRows = worksheet.getRows(startRowNumber, lastRowNumber);
-  if (!employeeRows) {
-    // throw new Error("No employee rows found");
-    console.log("No employee rows found");
+  const rows = worksheet.getRows(startRowNumber, lastRowNumber);
+  if (!rows) {
+    // throw new Error("No matching rows found");
+    console.log("No matching rows found");
     return undefined;
   }
 
   // Find exact match first
-  let row = employeeRows.find((row) => {
-    let worksheetEmployeeLastName = undefined;
-    let worksheetEmployeeFirstName = undefined;
+  let row = rows.find((row) => {
+    let worksheetLastName = undefined;
+    let worksheetFirstName = undefined;
 
     if ("lastName" in lookupCols && "firstName" in lookupCols) {
-      worksheetEmployeeLastName = sanitizeText(
+      worksheetLastName = sanitizeText(
         row.getCell(lookupCols.lastName).value?.toString()
       );
-      worksheetEmployeeFirstName = sanitizeText(
+      worksheetFirstName = sanitizeText(
         row.getCell(lookupCols.firstName).value?.toString()
       );
     } else if ("name" in lookupCols) {
-      const worksheetEmployeeName = sanitizeText(
+      const currentRowName = sanitizeText(
         row.getCell(lookupCols.name).value?.toString()
       );
-      if (worksheetEmployeeName) {
-        const nameArray = worksheetEmployeeName.split(
-          lookupCols.delimiter ?? " "
-        );
+      if (currentRowName) {
+        const nameArray = currentRowName.split(lookupCols.delimiter ?? " ");
         if (
           nameArray.length > 1 &&
           lookupCols.order === "FIRST_NAME LAST_NAME"
         ) {
-          worksheetEmployeeFirstName = nameArray[0]?.trim();
-          worksheetEmployeeLastName = nameArray[1]?.trim();
+          worksheetFirstName = nameArray[0]?.trim();
+          worksheetLastName = nameArray[1]?.trim();
         } else if (
           nameArray.length > 1 &&
           lookupCols.order === "LAST_NAME FIRST_NAME"
         ) {
-          worksheetEmployeeFirstName = nameArray[1]?.trim();
-          worksheetEmployeeLastName = nameArray[0]?.trim();
+          worksheetFirstName = nameArray[1]?.trim();
+          worksheetLastName = nameArray[0]?.trim();
         }
       }
     }
 
-    if (!worksheetEmployeeLastName || !worksheetEmployeeFirstName) {
+    if (!worksheetLastName || !worksheetFirstName) {
       return false;
     }
 
     return sanitizedNameValues.some(
       (nameValue) =>
-        worksheetEmployeeLastName === nameValue.lastName &&
-        worksheetEmployeeFirstName === nameValue.firstName
+        worksheetLastName === nameValue.lastName &&
+        worksheetFirstName === nameValue.firstName
     );
   });
 
   // Find similar match if exact match not found
   if (!row && _findSimilarMatch) {
-    row = employeeRows.find((row) => {
-      let worksheetEmployeeLastName = undefined;
-      let worksheetEmployeeFirstName = undefined;
+    row = rows.find((row) => {
+      let worksheetLastName = undefined;
+      let worksheetFirstName = undefined;
       if ("lastName" in lookupCols && "firstName" in lookupCols) {
-        worksheetEmployeeLastName = sanitizeText(
+        worksheetLastName = sanitizeText(
           row.getCell(lookupCols.lastName).value?.toString()
         );
-        worksheetEmployeeFirstName = sanitizeText(
+        worksheetFirstName = sanitizeText(
           row.getCell(lookupCols.firstName).value?.toString()
         );
       } else if ("name" in lookupCols) {
-        const worksheetEmployeeName = sanitizeText(
+        const currentRowName = sanitizeText(
           row.getCell(lookupCols.name).value?.toString()
         );
-        if (worksheetEmployeeName) {
-          const nameArray = worksheetEmployeeName.split(
-            lookupCols.delimiter ?? " "
-          );
+        if (currentRowName) {
+          const nameArray = currentRowName.split(lookupCols.delimiter ?? " ");
           if (
             nameArray.length > 1 &&
             lookupCols.order === "FIRST_NAME LAST_NAME"
           ) {
-            worksheetEmployeeFirstName = nameArray[0]?.trim();
-            worksheetEmployeeLastName = nameArray[1]?.trim();
+            worksheetFirstName = nameArray[0]?.trim();
+            worksheetLastName = nameArray[1]?.trim();
           } else if (
             nameArray.length > 1 &&
             lookupCols.order === "LAST_NAME FIRST_NAME"
           ) {
-            worksheetEmployeeFirstName = nameArray[1]?.trim();
-            worksheetEmployeeLastName = nameArray[0]?.trim();
+            worksheetFirstName = nameArray[1]?.trim();
+            worksheetLastName = nameArray[0]?.trim();
           }
         }
       }
-      if (!worksheetEmployeeLastName || !worksheetEmployeeFirstName) {
+      if (!worksheetLastName || !worksheetFirstName) {
         return false;
       }
 
@@ -330,10 +289,10 @@ export const findMatchingRowByName = ({
           nameValue.lastName !== "" &&
           nameValue.firstName &&
           nameValue.firstName !== "" &&
-          ((worksheetEmployeeLastName.includes(nameValue.lastName) &&
-            worksheetEmployeeFirstName.includes(nameValue.firstName)) ||
-            (nameValue.lastName?.includes(worksheetEmployeeLastName) &&
-              nameValue.firstName?.includes(worksheetEmployeeFirstName)))
+          ((worksheetLastName.includes(nameValue.lastName) &&
+            worksheetFirstName.includes(nameValue.firstName)) ||
+            (nameValue.lastName?.includes(worksheetLastName) &&
+              nameValue.firstName?.includes(worksheetFirstName)))
       );
     });
   }
@@ -341,68 +300,167 @@ export const findMatchingRowByName = ({
   return row;
 };
 
-// Find next employee row that does not match current employee by id
-export const findNextDifferentEmployeeRowById = ({
+/**
+ * Retrieves a record set (contiguous group of rows) from the worksheet that match a cell value at the identifier column and optional conditions
+ *
+ * @param worksheet - The worksheet to search for the matching rows.
+ * @param startRowNumber - The starting row number to search for the matching rows.
+ * @param identifierCol - The column to search for the identifier value in the worksheet.
+ * @param identifierValue - The value to match the identifier value.
+ * @param identifierCondition - The condition to match the identifier value.
+ * @param opts - Options to customize the search process.
+ * @param opts.findSimilarMatchWithLastDigits - Whether to find a similar match based on the last digits of the identifier value.
+ *
+ * @returns {ExcelJS.Row[]} - Returns the rows of the matching record set
+ *
+ * @example
+ * const rows = getRowsOfMatchingRecordSet({
+ *   worksheet,
+ *   startRowNumber: 2,
+ *   identifierCol: "A",
+ *   identifierValue: "12345",
+ *   opts: { findSimilarMatchWithLastDigits: true }
+ * });
+ */
+
+export const getRowsOfMatchingRecordSet = ({
   worksheet,
-  currentEmployeeRow,
-  lastRowNumber,
-  lookupCol,
-  conditions,
+  startRowNumber,
+  identifierCol,
+  identifierValue,
+  identifierCondition,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
-  currentEmployeeRow: ExcelJS.Row;
+  startRowNumber: number;
   lastRowNumber: number;
+  identifierCol: string;
+  identifierValue: string;
+  identifierCondition?: (identifierValue: string) => boolean;
+  opts?: {
+    findSimilarMatchWithLastDigits?: boolean;
+  };
+}): ExcelJS.Row[] => {
+  let rowNumber = startRowNumber;
+  let currentRow = worksheet.getRow(rowNumber);
+  let currentIdentifierValue = currentRow
+    .getCell(identifierCol)
+    .value?.toString();
+  const rows = [];
+  while (
+    currentIdentifierValue !== null &&
+    currentIdentifierValue !== "" &&
+    (currentIdentifierValue === identifierValue ||
+      (opts?.findSimilarMatchWithLastDigits &&
+        currentIdentifierValue?.endsWith(identifierValue)) ||
+      (currentIdentifierValue && identifierCondition?.(currentIdentifierValue)))
+  ) {
+    rows.push(currentRow);
+    rowNumber++;
+    currentRow = worksheet.getRow(rowNumber);
+    currentIdentifierValue = currentRow
+      .getCell(identifierCol)
+      .value?.toString();
+  }
+  return rows;
+};
+
+/**
+ * Retrieves a set of rows from the worksheet that match a cell value at the identifier column and optional conditions
+ * and returns the newly added row
+ * @param worksheet - The worksheet to search for the matching rows.
+ * @param startRowNumber - The starting row number to search for the matching rows.
+ * @param identifierCol - The column to search for the identifier value in the worksheet.
+ *
+ * @returns {ExcelJS.Row} - Returns the last row of the record set
+ *
+ * @example
+ * const newRow = createNewRowAfterRecordSet({
+ *   worksheet,
+ *   startRowNumber: 2,
+ *   identifierCol: "A"
+ * });
+ */
+export const createNewRowAfterRecordSet = ({
+  worksheet,
+  startRowNumber,
+  identifierCol,
+}: {
+  worksheet: ExcelJS.Worksheet;
+  startRowNumber: number;
+  identifierCol: string;
+}): ExcelJS.Row => {
+  // Get rows for employee data
+  let prepRowNumber = startRowNumber;
+  let prepCellFieldValue = worksheet
+    .getRow(prepRowNumber)
+    .getCell(identifierCol).value;
+  while (prepCellFieldValue !== null && prepCellFieldValue !== "") {
+    prepRowNumber++;
+    prepCellFieldValue = worksheet
+      .getRow(prepRowNumber)
+      .getCell(identifierCol).value;
+  }
+  const previousRecordSet = prepRowNumber - 1;
+
+  // Duplicate previous row
+  worksheet.insertRow(previousRecordSet + 1, [], "i+");
+  const newRow = worksheet.getRow(previousRecordSet + 1);
+  newRow.eachCell({ includeEmpty: true }, (cell) => {
+    cell.value = "";
+  });
+  return newRow;
+};
+
+// Find next row with name that does not match current row name by id
+export const findNextRecordSetRowById = ({
+  worksheet,
+  startingRow,
+  lastRowNumber,
+  id,
+  lookupCol,
+  opts,
+}: {
+  worksheet: ExcelJS.Worksheet;
+  startingRow: ExcelJS.Row;
+  lastRowNumber: number;
+  id: string;
   lookupCol: string;
-  conditions?: {
-    col: string;
-    condition: (cell: ExcelJS.Cell) => boolean;
-  }[];
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
 }) => {
-  const currentEmployeeId = sanitizeText(
-    currentEmployeeRow.getCell(lookupCol).value?.toString()
-  );
-  const employeeRows = worksheet.getRows(
-    currentEmployeeRow.number,
-    lastRowNumber
-  );
-  if (!employeeRows) {
-    // throw new Error("No employee rows found");
-    console.log("No employee rows found");
+  const rows = worksheet.getRows(startingRow.number, lastRowNumber);
+  if (!rows) {
+    // throw new Error("No matching rows found");
+    console.log("No matching rows found");
     return undefined;
   }
 
-  let nextEmployeeRow = employeeRows.find((row) => {
-    const worksheetEmployeeId = sanitizeText(
-      row.getCell(lookupCol).value?.toString()
-    );
+  let nextMatchingRow = rows.find((row) => {
+    let currentRowId = sanitizeText(row.getCell(lookupCol).value?.toString());
+    if (!currentRowId) {
+      return true;
+    }
     return (
-      worksheetEmployeeId !== currentEmployeeId &&
-      (conditions
-        ? conditions?.every((condition) => {
-            const cell = row.getCell(condition.col);
-            return condition.condition(cell);
-          })
-        : true)
+      currentRowId !== id &&
+      (opts?.findSimilarMatchWithLastDigits ? currentRowId.endsWith(id) : true)
     );
   });
 
-  return nextEmployeeRow;
+  return nextMatchingRow;
 };
 
-// Find next employee row that does not match current employee by name
-export const findNextDifferentEmployeeRowByName = ({
+// Find next record set that does not match current record by name
+export const findNextRecordSetRowByName = ({
   worksheet,
-  currentEmployeeRow,
+  startingRow,
   lastRowNumber,
   lookupCols,
   conditions,
 }: {
   worksheet: ExcelJS.Worksheet;
-  currentEmployeeRow: ExcelJS.Row;
+  startingRow: ExcelJS.Row;
   lastRowNumber: number;
   lookupCols:
     | {
@@ -419,86 +477,81 @@ export const findNextDifferentEmployeeRowByName = ({
     condition: (cell: ExcelJS.Cell) => boolean;
   }[];
 }) => {
-  let currentEmployeeLastName = undefined;
-  let currentEmployeeFirstName = undefined;
+  let currentLastName = undefined;
+  let currentFirstName = undefined;
   if ("lastName" in lookupCols && "firstName" in lookupCols) {
-    currentEmployeeLastName = sanitizeText(
-      currentEmployeeRow.getCell(lookupCols.lastName).value?.toString()
+    currentLastName = sanitizeText(
+      startingRow.getCell(lookupCols.lastName).value?.toString()
     );
-    currentEmployeeFirstName = sanitizeText(
-      currentEmployeeRow.getCell(lookupCols.firstName).value?.toString()
+    currentFirstName = sanitizeText(
+      startingRow.getCell(lookupCols.firstName).value?.toString()
     );
   } else if ("name" in lookupCols) {
     const currentEmployeeName = sanitizeText(
-      currentEmployeeRow.getCell(lookupCols.name).value?.toString(),
+      startingRow.getCell(lookupCols.name).value?.toString(),
       { removeSpecialChars: false, removeWhitespace: false }
     );
 
     if (currentEmployeeName) {
       const nameArray = currentEmployeeName.split(lookupCols.delimiter ?? " ");
       if (nameArray.length > 1 && lookupCols.order === "FIRST_NAME LAST_NAME") {
-        currentEmployeeFirstName = nameArray[0]?.trim();
-        currentEmployeeLastName = nameArray[1]?.trim();
+        currentFirstName = nameArray[0]?.trim();
+        currentLastName = nameArray[1]?.trim();
       } else if (
         nameArray.length > 1 &&
         lookupCols.order === "LAST_NAME FIRST_NAME"
       ) {
-        currentEmployeeFirstName = nameArray[1]?.trim();
-        currentEmployeeLastName = nameArray[0]?.trim();
+        currentFirstName = nameArray[1]?.trim();
+        currentLastName = nameArray[0]?.trim();
       }
     }
   }
 
-  const employeeRows = worksheet.getRows(
-    currentEmployeeRow.number,
-    lastRowNumber
-  );
-  if (!employeeRows) {
-    // throw new Error("No employee rows found");
-    console.log("No employee rows found");
+  const rows = worksheet.getRows(startingRow.number, lastRowNumber);
+  if (!rows) {
+    // throw new Error("No matching rows found");
+    console.log("No matching rows found");
     return undefined;
   }
 
-  let nextEmployeeRow = employeeRows.find((row) => {
-    let worksheetEmployeeLastName = undefined;
-    let worksheetEmployeeFirstName = undefined;
+  let nextMatchingRow = rows.find((row) => {
+    let nextRowLastName = undefined;
+    let nextRowFirstName = undefined;
     if ("lastName" in lookupCols && "firstName" in lookupCols) {
-      worksheetEmployeeLastName = sanitizeText(
+      nextRowLastName = sanitizeText(
         row.getCell(lookupCols.lastName).value?.toString()
       );
-      worksheetEmployeeFirstName = sanitizeText(
+      nextRowFirstName = sanitizeText(
         row.getCell(lookupCols.firstName).value?.toString()
       );
     } else if ("name" in lookupCols) {
-      const worksheetEmployeeName = sanitizeText(
+      const currentRowName = sanitizeText(
         row.getCell(lookupCols.name).value?.toString(),
         { removeSpecialChars: false, removeWhitespace: false }
       );
-      if (worksheetEmployeeName) {
-        const nameArray = worksheetEmployeeName.split(
-          lookupCols.delimiter ?? " "
-        );
+      if (currentRowName) {
+        const nameArray = currentRowName.split(lookupCols.delimiter ?? " ");
         if (
           nameArray.length > 1 &&
           lookupCols.order === "FIRST_NAME LAST_NAME"
         ) {
-          worksheetEmployeeFirstName = nameArray[0]?.trim();
-          worksheetEmployeeLastName = nameArray[1]?.trim();
+          nextRowFirstName = nameArray[0]?.trim();
+          nextRowLastName = nameArray[1]?.trim();
         } else if (
           nameArray.length > 1 &&
           lookupCols.order === "LAST_NAME FIRST_NAME"
         ) {
-          worksheetEmployeeFirstName = nameArray[1]?.trim();
-          worksheetEmployeeLastName = nameArray[0]?.trim();
+          nextRowFirstName = nameArray[1]?.trim();
+          nextRowLastName = nameArray[0]?.trim();
         }
       }
     }
-    if (!worksheetEmployeeLastName || !worksheetEmployeeFirstName) {
+    if (!nextRowLastName || !nextRowFirstName) {
       return true;
     }
     return (
-      (worksheetEmployeeLastName !== currentEmployeeLastName ||
-        worksheetEmployeeFirstName !== currentEmployeeFirstName) &&
+      (nextRowLastName !== currentLastName ||
+        nextRowFirstName !== currentFirstName) &&
       (conditions
         ? conditions?.every((condition) => {
             const cell = row.getCell(condition.col);
@@ -508,37 +561,5 @@ export const findNextDifferentEmployeeRowByName = ({
     );
   });
 
-  return nextEmployeeRow;
-};
-
-// Create new row for employees not found
-export const createNewRowForEmployeeNotFound = ({
-  worksheet,
-  startRowNumber,
-  identifierCol,
-}: {
-  worksheet: ExcelJS.Worksheet;
-  startRowNumber: number;
-  identifierCol: string;
-}) => {
-  // Get rows for employee data
-  let unknownEmployeePrepRowNumber = startRowNumber;
-  let unknownEmployeePopulatedFieldValue = worksheet
-    .getRow(unknownEmployeePrepRowNumber)
-    .getCell(identifierCol).value;
-  while (
-    unknownEmployeePopulatedFieldValue !== null &&
-    unknownEmployeePopulatedFieldValue !== ""
-  ) {
-    unknownEmployeePrepRowNumber++;
-    unknownEmployeePopulatedFieldValue = worksheet
-      .getRow(unknownEmployeePrepRowNumber)
-      .getCell(identifierCol).value;
-  }
-  const unknownEmployeePrepLastEmployeeRow = unknownEmployeePrepRowNumber - 1;
-
-  // Duplicate previous row
-  worksheet.duplicateRow(unknownEmployeePrepLastEmployeeRow, 1, true);
-  const newRow = worksheet.getRow(unknownEmployeePrepLastEmployeeRow + 1);
-  return newRow;
+  return nextMatchingRow;
 };
