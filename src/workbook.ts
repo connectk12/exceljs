@@ -63,22 +63,32 @@ export const exportWorkbook = async ({
     password?: string;
   };
 }) => {
-  if (opts?.currentWorksheet && opts.removeSharedFormulas) {
-    removeSharedFormulas(opts.currentWorksheet);
-  }
-  if (opts?.currentWorksheet && opts.setWorksheetViewId && opts.worksheetName) {
-    let worksheetId = -1;
-    workbook.worksheets.forEach((worksheet, index) => {
-      if (worksheet.name === opts.worksheetName) {
-        worksheetId = index + 1;
-      }
-    });
-    if (worksheetId > 0) {
-      setWorksheetView(workbook, worksheetId);
+  try {
+    if (opts?.currentWorksheet && opts.removeSharedFormulas) {
+      removeSharedFormulas(opts.currentWorksheet);
     }
+    if (
+      opts?.currentWorksheet &&
+      opts.setWorksheetViewId &&
+      opts.worksheetName
+    ) {
+      let worksheetId = -1;
+      workbook.worksheets.forEach((worksheet, index) => {
+        if (worksheet.name === opts.worksheetName) {
+          worksheetId = index + 1;
+        }
+      });
+      if (worksheetId > 0) {
+        setWorksheetView(workbook, worksheetId);
+      }
+    }
+    await workbook.xlsx.writeFile(outputPathname, {
+      password: opts?.password,
+    });
+    console.log("Workbook exported", outputPathname);
+  } catch (error) {
+    console.log("Error exporting workbook", error);
   }
-  await workbook.xlsx.writeFile(outputPathname);
-  console.log("Workbook exported", outputPathname);
 };
 
 export const removeSharedFormulas = (worksheet: ExcelJS.Worksheet) => {
