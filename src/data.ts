@@ -315,7 +315,7 @@ export const findMatchingRowByName = ({
  * It searches for the next row that does not match the lookup value.
  *
  * @param worksheet - The worksheet to search for the last row in the record set.
- * @param startingRow - The starting row to search for the last row in the record set.
+ * @param startRowNumber - The starting row to search for the last row in the record set.
  * @param lastRowNumber - The last row number to search for the last row in the record set.
  * @param lookupCol - The column to search for the lookup value in the worksheet.
  * @param lookupValue - The value to match the lookup value.
@@ -324,18 +324,18 @@ export const findMatchingRowByName = ({
  */
 export const findLastRowInRecordSet = ({
   worksheet,
-  startingRow,
+  startRowNumber,
   lastRowNumber,
   lookupCol,
   lookupValue,
 }: {
   worksheet: ExcelJS.Worksheet;
-  startingRow: ExcelJS.Row;
+  startRowNumber: number;
   lastRowNumber: number;
   lookupCol: string;
   lookupValue: ExcelJS.CellValue;
 }): ExcelJS.Row | undefined => {
-  const rows = worksheet.getRows(startingRow.number, lastRowNumber);
+  const rows = worksheet.getRows(startRowNumber, lastRowNumber);
   if (!rows) {
     // throw new Error("No matching rows found");
     console.log("No matching rows found");
@@ -364,7 +364,7 @@ export const findLastRowInRecordSet = ({
  * It searches for the next row that does not match id.
  *
  * @param worksheet - The worksheet to search for the next record set.
- * @param startingRow - The starting row to search for the next record set.
+ * @param startRowNumber - The starting row number to search for the next record set.
  * @param lastRowNumber - The last row number to search for the next record set.
  * @param id - The id to match the id value.
  * @param lookupCol - The column to search for the id in the worksheet.
@@ -374,14 +374,14 @@ export const findLastRowInRecordSet = ({
  */
 export const findNextRecordSetRowById = ({
   worksheet,
-  startingRow,
+  startRowNumber,
   lastRowNumber,
   id,
   lookupCol,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
-  startingRow: ExcelJS.Row;
+  startRowNumber: number;
   lastRowNumber: number;
   id: string;
   lookupCol: string;
@@ -389,7 +389,7 @@ export const findNextRecordSetRowById = ({
     findSimilarMatchWithLastDigits?: boolean;
   };
 }): ExcelJS.Row | undefined => {
-  const rows = worksheet.getRows(startingRow.number, lastRowNumber);
+  const rows = worksheet.getRows(startRowNumber, lastRowNumber);
   if (!rows) {
     // throw new Error("No matching rows found");
     console.log("No matching rows found");
@@ -417,7 +417,7 @@ export const findNextRecordSetRowById = ({
  * It can also include conditions to match additional columns.
  *
  * @param worksheet - The worksheet to search for the next record set.
- * @param startingRow - The starting row to search for the next record set.
+ * @param startRowNumber - The starting row to search for the next record set.
  * @param lastRowNumber - The last row number to search for the next record set.
  * @param lookupCols - The columns to search for the name in the worksheet.
  * @param conditions - The conditions to match additional columns.
@@ -426,13 +426,13 @@ export const findNextRecordSetRowById = ({
  */
 export const findNextRecordSetRowByName = ({
   worksheet,
-  startingRow,
+  startRowNumber,
   lastRowNumber,
   lookupCols,
   conditions,
 }: {
   worksheet: ExcelJS.Worksheet;
-  startingRow: ExcelJS.Row;
+  startRowNumber: number;
   lastRowNumber: number;
   lookupCols:
     | {
@@ -449,18 +449,19 @@ export const findNextRecordSetRowByName = ({
     condition: (cell: ExcelJS.Cell) => boolean;
   }[];
 }): ExcelJS.Row | undefined => {
+  const startRow = worksheet.getRow(startRowNumber);
   let currentLastName = undefined;
   let currentFirstName = undefined;
   if ("lastName" in lookupCols && "firstName" in lookupCols) {
     currentLastName = sanitizeText(
-      startingRow.getCell(lookupCols.lastName).value?.toString()
+      startRow.getCell(lookupCols.lastName).value?.toString()
     );
     currentFirstName = sanitizeText(
-      startingRow.getCell(lookupCols.firstName).value?.toString()
+      startRow.getCell(lookupCols.firstName).value?.toString()
     );
   } else if ("name" in lookupCols) {
     const currentEmployeeName = sanitizeText(
-      startingRow.getCell(lookupCols.name).value?.toString(),
+      startRow.getCell(lookupCols.name).value?.toString(),
       { removeSpecialChars: false, removeWhitespace: false }
     );
 
@@ -479,7 +480,7 @@ export const findNextRecordSetRowByName = ({
     }
   }
 
-  const rows = worksheet.getRows(startingRow.number, lastRowNumber);
+  const rows = worksheet.getRows(startRow.number, lastRowNumber);
   if (!rows) {
     // throw new Error("No matching rows found");
     console.log("No matching rows found");
