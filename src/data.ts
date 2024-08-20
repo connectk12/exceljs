@@ -328,12 +328,14 @@ export const findLastRowInRecordSet = ({
   lastRowNumber,
   lookupCol,
   lookupValue,
+  lookupCondition,
 }: {
   worksheet: ExcelJS.Worksheet;
   startRowNumber: number;
   lastRowNumber: number;
   lookupCol: string;
   lookupValue: ExcelJS.CellValue;
+  lookupCondition?: (currentRowValue: string) => boolean;
 }): ExcelJS.Row | undefined => {
   const rows = worksheet.getRows(startRowNumber, lastRowNumber);
   if (!rows) {
@@ -346,16 +348,14 @@ export const findLastRowInRecordSet = ({
     let currentRowValue = sanitizeText(
       row.getCell(lookupCol).value?.toString()
     );
-    if (!currentRowValue) {
-      return true;
-    }
-    return currentRowValue !== lookupValue;
+    if (!currentRowValue) return true;
+    if (lookupCondition?.(currentRowValue)) return true;
+    return currentRowValue === lookupValue;
   });
 
   const lastRowInRecordSet = nextMatchingRow
     ? worksheet.getRow(nextMatchingRow.number - 1)
     : worksheet.getRow(lastRowNumber);
-
   return lastRowInRecordSet;
 };
 
@@ -402,7 +402,7 @@ export const findNextRecordSetRowById = ({
       return true;
     }
     return (
-      currentRowId !== id &&
+      currentRowId === id &&
       (opts?.findSimilarMatchWithLastDigits ? currentRowId.endsWith(id) : true)
     );
   });
@@ -538,15 +538,15 @@ export const findNextRecordSetRowByName = ({
 };
 
 /**
- * Retrieves a record set (contiguous group of rows) from the worksheet that match a cell value at the identifier column and optional conditions
+ * Retrieves a record set (contiguous group of rows) from the worksheet that match a cell value at the lookup column and optional conditions
  *
  * @param worksheet - The worksheet to search for the matching rows.
  * @param startRowNumber - The starting row number to search for the matching rows.
- * @param identifierCol - The column to search for the identifier value in the worksheet.
- * @param identifierValue - The value to match the identifier value.
- * @param identifierCondition - The condition to match the identifier value.
+ * @param lookupCol - The column to search for the lookup value in the worksheet.
+ * @param lookupValue - The value to match the lookup value.
+ * @param lookupCondition - The condition to match the lookup value.
  * @param opts - Options to customize the search process.
- * @param opts.findSimilarMatchWithLastDigits - Whether to find a similar match based on the last digits of the identifier value.
+ * @param opts.findSimilarMatchWithLastDigits - Whether to find a similar match based on the last digits of the lookup value.
  *
  * @returns {ExcelJS.Row[]} - Returns the rows of the matching record set
  *
@@ -554,8 +554,8 @@ export const findNextRecordSetRowByName = ({
  * const rows = getRowsOfMatchingRecordSet({
  *   worksheet,
  *   startRowNumber: 2,
- *   identifierCol: "A",
- *   identifierValue: "12345",
+ *   lookupCol: "A",
+ *   lookupValue: "12345",
  *   opts: { findSimilarMatchWithLastDigits: true }
  * });
  */
@@ -563,51 +563,49 @@ export const findNextRecordSetRowByName = ({
 export const getRowsOfMatchingRecordSet = ({
   worksheet,
   startRowNumber,
-  identifierCol,
-  identifierValue,
-  identifierCondition,
+  lastRowNumber,
+  lookupCol,
+  lookupValue,
+  lookupCondition,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
   startRowNumber: number;
   lastRowNumber: number;
-  identifierCol: string;
-  identifierValue: string;
-  identifierCondition?: (identifierValue: string) => boolean;
+  lookupCol: string;
+  lookupValue: string;
+  lookupCondition?: (lookupValue: string) => boolean;
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
 }): ExcelJS.Row[] => {
   let rowNumber = startRowNumber;
   let currentRow = worksheet.getRow(rowNumber);
-  let currentIdentifierValue = currentRow
-    .getCell(identifierCol)
-    .value?.toString();
+  let currentlookupValue = currentRow.getCell(lookupCol).value?.toString();
   const rows = [];
   while (
-    currentIdentifierValue !== null &&
-    currentIdentifierValue !== "" &&
-    (currentIdentifierValue === identifierValue ||
+    rowNumber <= lastRowNumber &&
+    currentlookupValue !== lookupValue &&
+    (!opts?.findSimilarMatchWithLastDigits ||
       (opts?.findSimilarMatchWithLastDigits &&
-        currentIdentifierValue?.endsWith(identifierValue)) ||
-      (currentIdentifierValue && identifierCondition?.(currentIdentifierValue)))
+        !currentlookupValue?.endsWith(lookupValue))) &&
+    (!currentlookupValue ||
+      (currentlookupValue && !lookupCondition?.(currentlookupValue)))
   ) {
     rows.push(currentRow);
     rowNumber++;
     currentRow = worksheet.getRow(rowNumber);
-    currentIdentifierValue = currentRow
-      .getCell(identifierCol)
-      .value?.toString();
+    currentlookupValue = currentRow.getCell(lookupCol).value?.toString();
   }
   return rows;
 };
 
 /**
- * Retrieves a set of rows from the worksheet that match a cell value at the identifier column and optional conditions
+ * Retrieves a set of rows from the worksheet that match a cell value at the lookup column and optional conditions
  * and returns the newly added row
  * @param worksheet - The worksheet to search for the matching rows.
  * @param startRowNumber - The starting row number to search for the matching rows.
- * @param identifierCol - The column to search for the identifier value in the worksheet.
+ * @param lookupCol - The column to search for the lookup value in the worksheet.
  *
  * @returns {ExcelJS.Row} - Returns the last row of the record set
  *
@@ -615,28 +613,28 @@ export const getRowsOfMatchingRecordSet = ({
  * const newRow = createNewRowAfterRecordSet({
  *   worksheet,
  *   startRowNumber: 2,
- *   identifierCol: "A"
+ *   lookupCol: "A"
  * });
  */
 export const createNewRowAfterRecordSet = ({
   worksheet,
   startRowNumber,
-  identifierCol,
+  lookupCol,
 }: {
   worksheet: ExcelJS.Worksheet;
   startRowNumber: number;
-  identifierCol: string;
+  lookupCol: string;
 }): ExcelJS.Row => {
   // Get rows for employee data
   let prepRowNumber = startRowNumber;
   let prepCellFieldValue = worksheet
     .getRow(prepRowNumber)
-    .getCell(identifierCol).value;
+    .getCell(lookupCol).value;
   while (prepCellFieldValue !== null && prepCellFieldValue !== "") {
     prepRowNumber++;
     prepCellFieldValue = worksheet
       .getRow(prepRowNumber)
-      .getCell(identifierCol).value;
+      .getCell(lookupCol).value;
   }
   const previousRecordSet = prepRowNumber - 1;
 
