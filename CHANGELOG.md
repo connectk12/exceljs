@@ -1,5 +1,12 @@
 # @connectk12/exceljs
 
+## 0.0.4
+
+### Patch Changes
+
+- 5a6c7d3: Resolve issues with lookupCol. Refactor identifier to lookup.
+- bc7926b: Resolve issues with data functions
+
 ## 0.0.3
 
 ### Patch Changes
