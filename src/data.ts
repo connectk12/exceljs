@@ -129,9 +129,10 @@ export const findMatchingRowById = ({
     return undefined;
   }
 
-  const row = rows.find(
-    (row) => id === sanitizeText(row.getCell(lookupCol).value?.toString())
-  );
+  const row = rows.find((row) => {
+    const lookupValue = sanitizeText(row.getCell(lookupCol).value?.toString());
+    return id === lookupValue;
+  });
 
   if (!row && opts?.findSimilarMatchWithLastDigits) {
     return rows.find((row) => {
@@ -337,9 +338,11 @@ export const findLastRowInRecordSet = ({
   lookupValue: ExcelJS.CellValue;
   lookupCondition?: (currentRowValue: string) => boolean;
 }): ExcelJS.Row | undefined => {
-  const rows = worksheet.getRows(startRowNumber, lastRowNumber);
+  const rows = worksheet.getRows(
+    startRowNumber,
+    lastRowNumber - startRowNumber + 1
+  );
   if (!rows) {
-    // throw new Error("No matching rows found");
     console.log("No matching rows found");
     return undefined;
   }
@@ -348,14 +351,14 @@ export const findLastRowInRecordSet = ({
     let currentRowValue = sanitizeText(
       row.getCell(lookupCol).value?.toString()
     );
-    if (!currentRowValue) return true;
-    if (lookupCondition?.(currentRowValue)) return true;
-    return currentRowValue === lookupValue;
+    if (lookupCondition) {
+      return currentRowValue && !lookupCondition(currentRowValue);
+    }
+    return currentRowValue !== lookupValue;
   });
-
   const lastRowInRecordSet = nextMatchingRow
     ? worksheet.getRow(nextMatchingRow.number - 1)
-    : worksheet.getRow(lastRowNumber);
+    : undefined;
   return lastRowInRecordSet;
 };
 
@@ -566,7 +569,6 @@ export const getRowsOfMatchingRecordSet = ({
   lastRowNumber,
   lookupCol,
   lookupValue,
-  lookupCondition,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
@@ -574,28 +576,36 @@ export const getRowsOfMatchingRecordSet = ({
   lastRowNumber: number;
   lookupCol: string;
   lookupValue: string;
-  lookupCondition?: (lookupValue: string) => boolean;
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
-}): ExcelJS.Row[] => {
-  let rowNumber = startRowNumber;
-  let currentRow = worksheet.getRow(rowNumber);
-  let currentlookupValue = currentRow.getCell(lookupCol).value?.toString();
-  const rows = [];
-  while (
-    rowNumber <= lastRowNumber &&
-    currentlookupValue !== lookupValue &&
-    (!opts?.findSimilarMatchWithLastDigits ||
-      (opts?.findSimilarMatchWithLastDigits &&
-        !currentlookupValue?.endsWith(lookupValue))) &&
-    (!currentlookupValue ||
-      (currentlookupValue && !lookupCondition?.(currentlookupValue)))
-  ) {
-    rows.push(currentRow);
-    rowNumber++;
-    currentRow = worksheet.getRow(rowNumber);
-    currentlookupValue = currentRow.getCell(lookupCol).value?.toString();
+}): ExcelJS.Row[] | undefined => {
+  let rows: ExcelJS.Row[] | undefined = undefined;
+  const startRow = findMatchingRowById({
+    worksheet,
+    startRowNumber,
+    lastRowNumber,
+    lookupCol,
+    id: lookupValue,
+    opts,
+  });
+  if (startRow) {
+    const lastRow = findLastRowInRecordSet({
+      worksheet,
+      startRowNumber: startRow.number,
+      lastRowNumber,
+      lookupCol,
+      lookupValue,
+      lookupCondition: opts?.findSimilarMatchWithLastDigits
+        ? (currentRowValue) => currentRowValue?.endsWith(lookupValue)
+        : undefined,
+    });
+    if (startRow && lastRow) {
+      rows = worksheet.getRows(
+        startRow.number,
+        lastRow.number - startRow.number + 1
+      );
+    }
   }
   return rows;
 };
