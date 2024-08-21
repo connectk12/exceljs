@@ -130,8 +130,9 @@ export const findMatchingRowById = ({
   }
 
   const row = rows.find((row) => {
-    const lookupValue = sanitizeText(row.getCell(lookupCol).value?.toString());
-    return id === lookupValue;
+    const _id = sanitizeText(id);
+    const _lookupValue = sanitizeText(row.getCell(lookupCol).value?.toString());
+    return _id === _lookupValue;
   });
 
   if (!row && opts?.findSimilarMatchWithLastDigits) {
