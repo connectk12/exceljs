@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.5
+
+### Patch Changes
+
+- 1bf8a8a: Update findMatchingRowById to sanitize text
+
 ## 0.0.4
 
 ### Patch Changes
