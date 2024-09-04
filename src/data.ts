@@ -353,7 +353,10 @@ export const findLastRowInRecordSet = ({
       row.getCell(lookupCol).value?.toString()
     );
     if (lookupCondition) {
-      return currentRowValue && !lookupCondition(currentRowValue);
+      return (
+        !currentRowValue ||
+        (currentRowValue && !lookupCondition(currentRowValue))
+      );
     }
     return currentRowValue !== lookupValue;
   });
