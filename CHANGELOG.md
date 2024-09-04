@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.6
+
+### Patch Changes
+
+- 5c77d3a: Resolve issue with findLastRowInRecordSet condition
+
 ## 0.0.5
 
 ### Patch Changes
