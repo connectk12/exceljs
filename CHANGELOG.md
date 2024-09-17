@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.7
+
+### Patch Changes
+
+- 1b69307: Add lookupCondition to getRowsOfMatchingRecordSet and findMatchingRowById
+
 ## 0.0.6
 
 ### Patch Changes
