@@ -91,6 +91,7 @@ export const updateCell = (
  * @param lastRowNumber - The last row number to search for the matching row.
  * @param id - The ID to search for in the worksheet.
  * @param lookupCol - The column to search for the ID in the worksheet.
+ * @param lookupCondition - The condition to match the lookup value.
  * @param opts - Options to customize the search process.
  * @param opts.findSimilarMatchWithLastDigits - Whether to find a similar match based on the last digits of the ID.
  *
@@ -112,6 +113,7 @@ export const findMatchingRowById = ({
   lastRowNumber,
   id,
   lookupCol,
+  lookupCondition,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
@@ -119,6 +121,7 @@ export const findMatchingRowById = ({
   lastRowNumber: number;
   id: string;
   lookupCol: string;
+  lookupCondition?: (currentRowValue: string) => boolean;
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
@@ -135,7 +138,14 @@ export const findMatchingRowById = ({
     return _id === _lookupValue;
   });
 
-  if (!row && opts?.findSimilarMatchWithLastDigits) {
+  if (!row && lookupCondition) {
+    return rows.find((row) => {
+      const currentRowId = sanitizeText(
+        row.getCell(lookupCol).value?.toString()
+      );
+      return currentRowId && lookupCondition(currentRowId);
+    });
+  } else if (!row && opts?.findSimilarMatchWithLastDigits) {
     return rows.find((row) => {
       const currentRowId = sanitizeText(
         row.getCell(lookupCol).value?.toString()
@@ -321,6 +331,7 @@ export const findMatchingRowByName = ({
  * @param lastRowNumber - The last row number to search for the last row in the record set.
  * @param lookupCol - The column to search for the lookup value in the worksheet.
  * @param lookupValue - The value to match the lookup value.
+ * @param lookupCondition - The condition to match the lookup value.
  *
  * @returns {ExcelJS.Row | undefined} - The last row in the record set if found, otherwise undefined.
  */
@@ -573,6 +584,7 @@ export const getRowsOfMatchingRecordSet = ({
   lastRowNumber,
   lookupCol,
   lookupValue,
+  lookupCondition,
   opts,
 }: {
   worksheet: ExcelJS.Worksheet;
@@ -580,6 +592,7 @@ export const getRowsOfMatchingRecordSet = ({
   lastRowNumber: number;
   lookupCol: string;
   lookupValue: string;
+  lookupCondition?: (currentRowValue: string) => boolean;
   opts?: {
     findSimilarMatchWithLastDigits?: boolean;
   };
@@ -590,6 +603,7 @@ export const getRowsOfMatchingRecordSet = ({
     startRowNumber,
     lastRowNumber,
     lookupCol,
+    lookupCondition,
     id: lookupValue,
     opts,
   });
@@ -600,9 +614,10 @@ export const getRowsOfMatchingRecordSet = ({
       lastRowNumber,
       lookupCol,
       lookupValue,
-      lookupCondition: opts?.findSimilarMatchWithLastDigits
-        ? (currentRowValue) => currentRowValue?.endsWith(lookupValue)
-        : undefined,
+      lookupCondition:
+        lookupCondition ?? opts?.findSimilarMatchWithLastDigits
+          ? (currentRowValue) => currentRowValue?.endsWith(lookupValue)
+          : undefined,
     });
     if (startRow && lastRow) {
       rows = worksheet.getRows(
