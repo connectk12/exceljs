@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.8
+
+### Patch Changes
+
+- c8b4c0f: Resolve issue with sanitizeText opts?.removeWhitespace
+
 ## 0.0.7
 
 ### Patch Changes
