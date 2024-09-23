@@ -182,6 +182,7 @@ export const findMatchingRowById = ({
  * });
  *
  */
+
 export const findMatchingRowByName = ({
   worksheet,
   startRowNumber,
@@ -213,8 +214,8 @@ export const findMatchingRowByName = ({
 }): ExcelJS.Row | undefined => {
   const _findSimilarMatch = opts?.findSimilarMatch ?? true;
   const sanitizedNameValues = nameValues.map((nameValue) => ({
-    lastName: sanitizeText(nameValue.lastName),
-    firstName: sanitizeText(nameValue.firstName),
+    lastName: sanitizeText(nameValue.lastName, { uppercase: true }),
+    firstName: sanitizeText(nameValue.firstName, { uppercase: true }),
   }));
   const rows = worksheet.getRows(startRowNumber, lastRowNumber);
   if (!rows) {
@@ -230,14 +231,17 @@ export const findMatchingRowByName = ({
 
     if ("lastName" in lookupCols && "firstName" in lookupCols) {
       worksheetLastName = sanitizeText(
-        row.getCell(lookupCols.lastName).value?.toString()
+        row.getCell(lookupCols.lastName).value?.toString(),
+        { uppercase: true }
       );
       worksheetFirstName = sanitizeText(
-        row.getCell(lookupCols.firstName).value?.toString()
+        row.getCell(lookupCols.firstName).value?.toString(),
+        { uppercase: true }
       );
     } else if ("name" in lookupCols) {
       const currentRowName = sanitizeText(
-        row.getCell(lookupCols.name).value?.toString()
+        row.getCell(lookupCols.name).value?.toString(),
+        { uppercase: true }
       );
       if (currentRowName) {
         const nameArray = currentRowName.split(lookupCols.delimiter ?? " ");
@@ -245,14 +249,14 @@ export const findMatchingRowByName = ({
           nameArray.length > 1 &&
           lookupCols.order === "FIRST_NAME LAST_NAME"
         ) {
-          worksheetFirstName = nameArray[0]?.trim();
-          worksheetLastName = nameArray[1]?.trim();
+          worksheetFirstName = sanitizeText(nameArray[0], { uppercase: true });
+          worksheetLastName = sanitizeText(nameArray[1], { uppercase: true });
         } else if (
           nameArray.length > 1 &&
           lookupCols.order === "LAST_NAME FIRST_NAME"
         ) {
-          worksheetFirstName = nameArray[1]?.trim();
-          worksheetLastName = nameArray[0]?.trim();
+          worksheetFirstName = sanitizeText(nameArray[1], { uppercase: true });
+          worksheetLastName = sanitizeText(nameArray[0], { uppercase: true });
         }
       }
     }
@@ -261,11 +265,12 @@ export const findMatchingRowByName = ({
       return false;
     }
 
-    return sanitizedNameValues.some(
+    const match = sanitizedNameValues.some(
       (nameValue) =>
         worksheetLastName === nameValue.lastName &&
         worksheetFirstName === nameValue.firstName
     );
+    return match;
   });
 
   // Find similar match if exact match not found
@@ -275,14 +280,17 @@ export const findMatchingRowByName = ({
       let worksheetFirstName = undefined;
       if ("lastName" in lookupCols && "firstName" in lookupCols) {
         worksheetLastName = sanitizeText(
-          row.getCell(lookupCols.lastName).value?.toString()
+          row.getCell(lookupCols.lastName).value?.toString(),
+          { uppercase: true }
         );
         worksheetFirstName = sanitizeText(
-          row.getCell(lookupCols.firstName).value?.toString()
+          row.getCell(lookupCols.firstName).value?.toString(),
+          { uppercase: true }
         );
       } else if ("name" in lookupCols) {
         const currentRowName = sanitizeText(
-          row.getCell(lookupCols.name).value?.toString()
+          row.getCell(lookupCols.name).value?.toString(),
+          { uppercase: true }
         );
         if (currentRowName) {
           const nameArray = currentRowName.split(lookupCols.delimiter ?? " ");
@@ -290,14 +298,18 @@ export const findMatchingRowByName = ({
             nameArray.length > 1 &&
             lookupCols.order === "FIRST_NAME LAST_NAME"
           ) {
-            worksheetFirstName = nameArray[0]?.trim();
-            worksheetLastName = nameArray[1]?.trim();
+            worksheetFirstName = sanitizeText(nameArray[0], {
+              uppercase: true,
+            });
+            worksheetLastName = sanitizeText(nameArray[1], { uppercase: true });
           } else if (
             nameArray.length > 1 &&
             lookupCols.order === "LAST_NAME FIRST_NAME"
           ) {
-            worksheetFirstName = nameArray[1]?.trim();
-            worksheetLastName = nameArray[0]?.trim();
+            worksheetFirstName = sanitizeText(nameArray[1], {
+              uppercase: true,
+            });
+            worksheetLastName = sanitizeText(nameArray[0], { uppercase: true });
           }
         }
       }
@@ -305,7 +317,7 @@ export const findMatchingRowByName = ({
         return false;
       }
 
-      return sanitizedNameValues.some(
+      const match = sanitizedNameValues.some(
         (nameValue) =>
           nameValue.lastName &&
           nameValue.lastName !== "" &&
@@ -316,6 +328,7 @@ export const findMatchingRowByName = ({
             (nameValue.lastName?.includes(worksheetLastName) &&
               nameValue.firstName?.includes(worksheetFirstName)))
       );
+      return match;
     });
   }
 
