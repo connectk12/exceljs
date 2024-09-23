@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.9
+
+### Patch Changes
+
+- 72a978b: Fix findMatchingRowByName sanitized text
+
 ## 0.0.8
 
 ### Patch Changes
