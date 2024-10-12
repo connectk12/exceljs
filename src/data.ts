@@ -386,7 +386,7 @@ export const findLastRowInRecordSet = ({
   });
   const lastRowInRecordSet = nextMatchingRow
     ? worksheet.getRow(nextMatchingRow.number - 1)
-    : undefined;
+    : worksheet.getRow(lastRowNumber);
   return lastRowInRecordSet;
 };
 
