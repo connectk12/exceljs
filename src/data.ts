@@ -628,9 +628,10 @@ export const getRowsOfMatchingRecordSet = ({
       lookupCol,
       lookupValue,
       lookupCondition:
-        lookupCondition ?? opts?.findSimilarMatchWithLastDigits
+        lookupCondition ??
+        (opts?.findSimilarMatchWithLastDigits
           ? (currentRowValue) => currentRowValue?.endsWith(lookupValue)
-          : undefined,
+          : undefined),
     });
     if (startRow && lastRow) {
       rows = worksheet.getRows(
