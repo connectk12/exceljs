@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.11
+
+### Patch Changes
+
+- 500abb3: Resolve issue with getRowsOfMatchingRecordSet lookupCondition
+
 ## 0.0.10
 
 ### Patch Changes
