@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.12
+
+### Patch Changes
+
+- 7af0a03: Update validateColumns with cell.text
+
 ## 0.0.11
 
 ### Patch Changes
