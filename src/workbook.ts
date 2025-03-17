@@ -10,6 +10,7 @@ import ExcelJS from "@zurmokeeper/exceljs";
  * @param opts.date - Date to set the workbook's modified date to
  * @param opts.password - Password to decrypt the workbook
  * @param opts.ignoreNodes - Nodes to ignore when reading the workbook
+ * Available: sheetPr, dimension, sheetViews , sheetFormatPr, cols , sheetData, autoFilter , mergeCells , rowBreaks, hyperlinks , pageMargins, dataValidations, pageSetup, headerFooter , printOptions , picture, drawing, sheetProtection, tableParts , conditionalFormatting, extLst
  * @returns The Excel workbook
  */
 export const openWorkbook = async ({
