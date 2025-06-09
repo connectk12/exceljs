@@ -1,5 +1,11 @@
 # @connectk12/exceljs
 
+## 0.0.13
+
+### Patch Changes
+
+- ec7db56: @zurmokeeper/exceljs version bump to support pivot tables
+
 ## 0.0.12
 
 ### Patch Changes
